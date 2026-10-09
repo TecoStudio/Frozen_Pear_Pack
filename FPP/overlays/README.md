@@ -31,7 +31,7 @@
 ```sh
 python tools/build.py --list                            # 看每线 overlay 文件数
 python tools/build.py --line mc1.16 --line mc1.21 --dev # 组装基线线 + 目标线
-diff -rq dist/FPP-mc1.16.5-v8.7 dist/FPP-mc1.21.8-v9.0  # 差异应只有 pack.mcmeta
+diff -rq dist/FPP-mc1.16.5-v8.7 dist/FPP-mc1.21.11-v9.0  # 差异应只有 pack.mcmeta
 ```
 
 > 注意别拿主体目录直接跟产物对比（`diff -rq FPP/assets dist/...`）：主体在 Windows 工作区里是

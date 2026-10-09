@@ -36,7 +36,7 @@ After its discontinuation, **LIPiston** took over as the primary maintainer, wit
 ## Multiple MC version lines  
 
 Because Minecraft moves fast, this repo maintains **one line per major MC version's final patch**
-(1.16.5 / 1.17.1 / 1.18.2 / 1.19.4 / 1.20.6 / 1.21.8 / 26.1 …). All lines share one body of
+(1.16.5 / 1.17.1 / 1.18.2 / 1.19.4 / 1.20.6 / 1.21.11 / 26.1.2 / 26.2 / 26.3). All lines share one body of
 assets (`FPP/`); anything that truly differs lives in an overlay (`FPP/overlays/<line>/`), and
 `pack.mcmeta` is generated per line by the build script — no more hand-written version numbers.
 
@@ -46,7 +46,7 @@ python tools/build.py --dev           # assemble the default line into dist/ (dr
 python tools/build.py --all --zip     # build every line into its own distributable zip
 ```
 
-Output: `dist/FPP-mc<MC>-v<pack version>.zip`. Pushing a tag like `v9.0-mc1.21.8` makes CI build
+Output: `dist/FPP-mc<MC>-v<pack version>.zip`. Pushing a tag like `v9.0-mc1.21.11` makes CI build
 all lines and publish them as a GitHub Release.
 
 Layout conventions, release rules and how to avoid accidentally pushing to `master` are in

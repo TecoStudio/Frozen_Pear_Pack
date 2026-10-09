@@ -4,7 +4,7 @@
 
 设计目标
 --------
-一个材质包要同时维护多个 Minecraft 大版本线（1.16.5 / 1.17.1 / ... / 26.1）。
+一个材质包要同时维护多个 Minecraft 大版本线（1.16.5 / 1.17.1 / ... / 1.21.11 / 26.3）。
 各线之间 **绝大多数文件是相同的**（贴图 PNG 跨版本通用），只有少数随版本变化的
 文件（pack.mcmeta、物品模型 JSON、改名的贴图路径）不同。
 
@@ -14,11 +14,17 @@
     FPP/build.json              本包的版本线定义
     FPP/overlays/<line>/        只放与该线不同的文件（同名覆盖主体）；可以为空
     dist/                       构建产物（已 gitignore）
-        FPP-mc1.21.8-v9.0/      解包目录，可直接拖进游戏测试
-        FPP-mc1.21.8-v9.0.zip   分发包，pack.mcmeta 在压缩包根目录
+        FPP-mc1.21.11-v9.0/     解包目录，可直接拖进游戏测试
+        FPP-mc1.21.11-v9.0.zip  分发包，pack.mcmeta 在压缩包根目录
 
-pack.mcmeta 是 **生成** 的：pack_format / version / description 都来自 build.json，
-不再手写，避免版本号和实际内容漂移。
+pack.mcmeta 是 **生成** 的：pack_format / min_format / max_format / version /
+description 都来自 build.json，不再手写，避免版本号和实际内容漂移。
+
+生成写法有两种（build.json 的 formatShape 决定）：
+
+    legacy  只写 pack_format             —— 1.21.8 及更早（资源格式 ≤ 64）
+    range   pack_format + min/max_format —— 1.21.9 起引入区间写法；26.2 起
+                                            min/max 为必需字段，supported_formats 被移除
 
 文本类资源（.json / .mcmeta / .txt）在打包时统一按 LF 写入：它们不该随协作方
 Windows 上的 core.autocrlf 设置而变，否则本地构建与 CI 构建出的包内容不一致
@@ -47,6 +53,7 @@ import os
 import re
 import shutil
 import sys
+import unicodedata
 import zipfile
 from pathlib import Path
 
@@ -77,6 +84,12 @@ ZIP_DATE_TIME = (2020, 1, 1, 0, 0, 0)
 LINE_RE = re.compile(r"^mc[0-9][0-9A-Za-z._-]*$")
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+")
 VALID_SOURCES = ("verified", "assumed", "unknown")
+# pack.mcmeta 的写法，见文件头说明。格式号 ≥ RANGE_FORMAT_MIN 的线默认用 range：
+# 1.21.9 起引入 min_format/max_format 区间写法（资源格式 69；数据格式 65），
+# 26.2 起 min/max 为必需字段、supported_formats 被移除。阈值取 65 是为了在
+# "仍写 legacy" 时给出提醒，而不是假装 ≤64 的老格式也能用区间写法。
+VALID_SHAPES = ("legacy", "range")
+RANGE_FORMAT_MIN = 65
 
 WARN = []
 ERR = []
@@ -88,6 +101,16 @@ def warn(msg: str) -> None:
 
 def err(msg: str) -> None:
     ERR.append(msg)
+
+
+def display_width(s: str) -> int:
+    """终端显示宽度：CJK 全角字符占 2 列，中文表格靠 len() 对齐会歪。"""
+    return sum(2 if unicodedata.east_asian_width(c) in ("W", "F") else 1 for c in s)
+
+
+def pad(s: str, width: int, align: str = "left") -> str:
+    gap = " " * max(0, width - display_width(s))
+    return s + gap if align == "left" else gap + s
 
 
 # --------------------------------------------------------------------------- #
@@ -125,8 +148,23 @@ def load_config(pack_dir: Path) -> dict:
         seen.add(lid)
 
         pf = line.get("packFormat")
-        if pf is not None and (not isinstance(pf, int) or pf <= 0):
-            raise SystemExit(f"[错误] {lid} 的 packFormat 必须是正整数或 null，实际：{pf!r}")
+        if pf is not None and (isinstance(pf, bool) or not isinstance(pf, (int, float)) or pf <= 0):
+            raise SystemExit(f"[错误] {lid} 的 packFormat 必须是正数或 null，实际：{pf!r}")
+
+        # formatShape 可以省略：格式号 ≥ RANGE_FORMAT_MIN 的线默认用 range 写法
+        shape = line.get("formatShape")
+        if shape is None:
+            shape = "range" if (pf is not None and pf >= RANGE_FORMAT_MIN) else "legacy"
+            line["formatShape"] = shape
+        if shape not in VALID_SHAPES:
+            raise SystemExit(f"[错误] {lid} 的 formatShape 非法：{shape!r}（可选 {VALID_SHAPES}）")
+
+        for key in ("minFormat", "maxFormat"):
+            v = line.get(key)
+            if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float)) or v <= 0):
+                raise SystemExit(f"[错误] {lid} 的 {key} 必须是正数，实际：{v!r}")
+        if shape == "legacy" and (line.get("minFormat") is not None or line.get("maxFormat") is not None):
+            raise SystemExit(f"[错误] {lid}：formatShape=legacy 时不应给出 minFormat/maxFormat（改用 formatShape=range）")
 
         src = line.get("packFormatSource", "assumed")
         if src not in VALID_SOURCES:
@@ -217,12 +255,16 @@ def overlay_dir(pack_dir: Path, line_id: str) -> Path:
 
 def build_mcmeta(cfg: dict, line: dict) -> dict:
     """生成 pack.mcmeta 内容（唯一真值来源是 build.json）。"""
-    pack: dict = {
-        "pack_format": line["packFormat"],
-        "version": f"v{line['packVersion']} for MC{line['mc']}",
-        "description": cfg["description"],
-    }
-    # 允许每条线自定义 supported_formats / 覆盖字段（build.json 里写 supportedFormats）
+    pack: dict = {"pack_format": line["packFormat"]}
+    if line.get("formatShape") == "range":
+        # 1.21.9 起：用 min/max 区间声明兼容范围；不额外指定时等于本线的格式号，
+        # 即"为这一个版本制作"。要放宽到整个小版本序列，就在 build.json 里写 minFormat/maxFormat。
+        pack["min_format"] = line.get("minFormat", line["packFormat"])
+        pack["max_format"] = line.get("maxFormat", line["packFormat"])
+    pack["version"] = f"v{line['packVersion']} for MC{line['mc']}"
+    pack["description"] = cfg["description"]
+    # supported_formats 只适用于 1.20.2–1.21.x：它在 1.21.9 被 min/max_format 取代、
+    # 26.2 起被彻底移除，所以 26.x 的线不要再写这个字段（assemble 里会告警）。
     if line.get("supportedFormats") is not None:
         pack["supported_formats"] = line["supportedFormats"]
     for k, v in (line.get("mcmetaOverrides") or {}).items():
@@ -240,6 +282,12 @@ def assemble(pack_dir: Path, cfg: dict, line: dict, out_root: Path, do_zip: bool
         warn(f"{cfg['id']}/{line_id}（MC {line['mc']}）的 pack_format={line['packFormat']} 标记为 assumed —— 发布前请核对官方 Pack format 表。")
     elif line["packFormatSource"] == "unknown":
         warn(f"{cfg['id']}/{line_id}：packFormatSource=unknown 但已给出数字，请改回 verified。")
+
+    if line.get("formatShape") == "legacy" and line["packFormat"] >= RANGE_FORMAT_MIN:
+        warn(f"{cfg['id']}/{line_id}：格式 {line['packFormat']} ≥ {RANGE_FORMAT_MIN}（1.21.9 起改用 min/max_format）却仍是 formatShape=legacy，建议改为 range。")
+
+    if line.get("formatShape") == "range" and line.get("supportedFormats") is not None:
+        warn(f"{cfg['id']}/{line_id}：formatShape=range 的线不应再写 supported_formats（1.21.9 起由 min/max_format 取代，26.2 起已移除）。")
 
     zip_name = f"{cfg['id']}-mc{line['mc']}-v{line['packVersion']}"
     out_dir = out_root / zip_name
@@ -284,8 +332,16 @@ def assemble(pack_dir: Path, cfg: dict, line: dict, out_root: Path, do_zip: bool
     # 校验：产物必须是「根目录下有 pack.mcmeta 和 assets/ 的资源包」
     problems = []
     written = json.loads((out_dir / "pack.mcmeta").read_text(encoding="utf-8"))
-    if written["pack"]["pack_format"] != line["packFormat"]:
+    written_pack = written["pack"]
+    if written_pack.get("pack_format") != line["packFormat"]:
         problems.append("pack.mcmeta 的 pack_format 与 build.json 不一致")
+    if line.get("formatShape") == "range":
+        if written_pack.get("min_format") != line.get("minFormat", line["packFormat"]):
+            problems.append("pack.mcmeta 的 min_format 与 build.json 不一致")
+        if written_pack.get("max_format") != line.get("maxFormat", line["packFormat"]):
+            problems.append("pack.mcmeta 的 max_format 与 build.json 不一致")
+    elif "min_format" in written_pack or "max_format" in written_pack:
+        problems.append("formatShape=legacy 的线不应生成 min_format/max_format")
     if not (out_dir / "assets" / "minecraft").is_dir():
         problems.append("产物缺少 assets/minecraft 目录")
     crlf = [
@@ -316,6 +372,7 @@ def assemble(pack_dir: Path, cfg: dict, line: dict, out_root: Path, do_zip: bool
         "overlay": overlay_count,
         "overlayNote": overlay_note,
         "packFormat": line["packFormat"],
+        "shape": line.get("formatShape", "legacy"),
         "zip": None,
         "sha256": None,
     }
@@ -368,21 +425,23 @@ def human(n: int) -> str:
 # --------------------------------------------------------------------------- #
 
 def cmd_list(packs: list[tuple[Path, dict]]) -> None:
+    # 列宽按显示宽度（CJK=2）算，否则中文表头会把表头虚线撑歪
+    cols = ((9, "left"), (10, "left"), (7, "right"), (6, "left"), (9, "left"), (7, "right"), (4, "left"), (7, "right"))
     for pack_dir, cfg in packs:
         print(f"\n=== {cfg['id']} ({cfg['name']}) —— {pack_dir.name}/build.json ===")
-        header = f"{'线':<9} {'MC 目标':<10} {'format':>6} {'来源':<9} {'包版本':>7} {'冻结':<5} {'overlay':>8}  说明"
-        print(header)
-        print("-" * len(header))
+        header = " ".join(pad(t, w, a) for t, (w, a) in zip(("线", "MC 目标", "format", "写法", "来源", "包版本", "冻结", "overlay"), cols))
+        print(header + "  说明")
+        print("-" * (display_width(header) + 6))
         for line in cfg["lines"]:
             pf = "?" if line["packFormat"] is None else str(line["packFormat"])
+            shape = "-" if line["packFormat"] is None else line.get("formatShape", "legacy")
             ov = overlay_dir(pack_dir, line["line"])
             n = sum(1 for p in ov.rglob("*") if p.is_file()) if ov.is_dir() else 0
             ov_txt = f"{n}" if ov.is_dir() else "无目录"
             note = (line.get("notes") or "").split("；")[0].split("。")[0][:46]
-            print(
-                f"{line['line']:<9} {line['mc']:<10} {pf:>6} {line.get('packFormatSource','assumed'):<9} "
-                f"v{line['packVersion']:>5} {'是' if line.get('frozen') else '否':<5} {ov_txt:>8}  {note}"
-            )
+            cells = (line["line"], line["mc"], pf, shape, line.get("packFormatSource", "assumed"),
+                     f"v{line['packVersion']}", "是" if line.get("frozen") else "否", ov_txt)
+            print(" ".join(pad(t, w, a) for t, (w, a) in zip(cells, cols)) + "  " + note)
         print(f"默认线（--dev 不带 --line 时）：{cfg.get('defaultLine', cfg['lines'][0]['line'])}")
 
 
@@ -489,7 +548,8 @@ def main(argv: list[str] | None = None) -> int:
         print("-" * 96)
         for r in results:
             print(
-                f"{r['pack']}/{r['line']:<8} MC {r['mc']:<9} v{r['version']:<6} format={r['packFormat']:<4} "
+                f"{r['pack']}/{r['line']:<8} MC {r['mc']:<9} v{r['version']:<6} "
+                f"format={str(r['packFormat']):<4} {r['shape']:<6} "
                 f"{r['files']:>5} 文件 {human(r['bytes']):>8}  ({r['overlayNote']})"
             )
             print(f"    目录：{r['dir'].relative_to(REPO_ROOT).as_posix()}")

@@ -9,63 +9,90 @@
       "mc": "1.16.5",
       "packFormat": 6,
       "packFormatSource": "verified",
+      "formatShape": "legacy",
       "packVersion": "8.7",
       "frozen": true,
-      "notes": "历史主线：当前 FPP/ 主体内容就是 1.16.5，v8.7 为最后一个正式版。"
+      "notes": "历史主线：当前 FPP/ 主体内容就是 1.16.5，v8.7 为最后一个正式版。格式 6 由本仓库历史提交 + 官方版本清单核实"
     },
     {
       "line": "mc1.17",
       "mc": "1.17.1",
       "packFormat": 7,
       "packFormatSource": "verified",
+      "formatShape": "legacy",
       "packVersion": "9.0",
       "frozen": false,
-      "notes": "2025-04 之前曾以 1.17.1/FPP 存在，当时与 1.16.5 的 2723 个文件完全相同"
+      "notes": "2025-04 之前曾以 1.17.1/FPP 存在，当时与 1.16.5 的 2723 个文件完全相同；格式 7 由历史提交核实"
     },
     {
       "line": "mc1.18",
       "mc": "1.18.2",
       "packFormat": 8,
-      "packFormatSource": "assumed",
+      "packFormatSource": "verified",
+      "formatShape": "legacy",
       "packVersion": "9.0",
       "frozen": false,
-      "notes": "待核对 pack_format"
+      "notes": "1.18~1.18.2 均为 8；1.18.2 是该大版本最终补丁（2022-02-28）。格式号 2026-10-09 核对于两份独立格式表"
     },
     {
       "line": "mc1.19",
       "mc": "1.19.4",
       "packFormat": 13,
-      "packFormatSource": "assumed",
+      "packFormatSource": "verified",
+      "formatShape": "legacy",
       "packVersion": "9.0",
       "frozen": false,
-      "notes": "1.19/1.19.2 为 9，1.19.3 为 12，1.19.4 起为 13；本线取该大版本最终补丁"
+      "notes": "1.19~1.19.2 为 9、1.19.3 为 12、1.19.4 为 13；1.19.4 是该大版本最终补丁（2023-03-14）"
     },
     {
       "line": "mc1.20",
       "mc": "1.20.6",
       "packFormat": 32,
-      "packFormatSource": "assumed",
+      "packFormatSource": "verified",
+      "formatShape": "legacy",
       "packVersion": "9.0",
       "frozen": false,
-      "notes": "1.20.2 起支持 supported_formats；1.20.5/1.20.6 为 32"
+      "notes": "1.20~1.20.1 为 15、1.20.2 为 18、1.20.3/4 为 22、1.20.5/6 为 32；1.20.6 是该大版本最终补丁（2024-04-29）"
     },
     {
       "line": "mc1.21",
-      "mc": "1.21.8",
-      "packFormat": 64,
-      "packFormatSource": "assumed",
+      "mc": "1.21.11",
+      "packFormat": 75,
+      "packFormatSource": "verified",
+      "formatShape": "range",
       "packVersion": "9.0",
-      "frozen": false,
-      "notes": "当前开发主线。1.21.4 起物品模型转入 assets/minecraft/items/，需要 overlay 差异；若该大版本最终补丁不是 1.21.8，请同时改 mc 与 packFormat"
+      "frozen": true,
+      "notes": "1.21 大版本的最终补丁是 1.21.11（2025-12-09，官方版本清单确认）而不是 1.21.8；格式 75 由 Plastix/Plast-Pack、Godlander/objmc 两个真实资源包 + 两份格式表核实。1.21.9 起 pack.mcmeta 改用 min/max_format 区间写法。注意：1.21.4 起物品模型移到 assets/minecraft/items/，本线尚未提供 overlay 差异，游戏内表现未测试"
     },
     {
       "line": "mc26.1",
-      "mc": "26.1",
-      "packFormat": null,
-      "packFormatSource": "unknown",
+      "mc": "26.1.2",
+      "packFormat": 84,
+      "packFormatSource": "verified",
+      "formatShape": "range",
+      "packVersion": "9.0",
+      "frozen": true,
+      "notes": "26.1 是该年号体系第一个版本，最终补丁 26.1.2（2026-04-09）。格式 84：MCreator 26.1.x 资源包模板 + 独立格式表一致。物品模型路径差异同 1.21 线，尚未做 overlay"
+    },
+    {
+      "line": "mc26.2",
+      "mc": "26.2",
+      "packFormat": 88,
+      "packFormatSource": "verified",
+      "formatShape": "range",
+      "packVersion": "9.0",
+      "frozen": true,
+      "notes": "26.2（2026-06-16）无补丁版。格式 88：真实资源包 ItzOratotITA/OratotPVP 的 26.2 产物声明 min_format [88,0] + 独立格式表一致。26.2 起 min/max_format 为必需字段、supported_formats 被移除"
+    },
+    {
+      "line": "mc26.3",
+      "mc": "26.3",
+      "packFormat": 97.1,
+      "packFormatSource": "verified",
+      "formatShape": "range",
       "packVersion": "9.0",
       "frozen": false,
-      "notes": "新版本号体系，pack_format 未知：填上数字之前本线不会被构建（--release 直接报错）"
+      "notes": "当前最新正式版（2026-09-15），仍可能继续出 26.3.x：出补丁后请同步更新 mc 与 packFormat（格式号从 26.1 的 84 → 26.2 的 88 → 26.3 的 97.1，已出现小数位）。格式 97.1：MCreator 26.3.x 模板 + SummerFields 资源包 max_format 一致"
     }
   ]
 }

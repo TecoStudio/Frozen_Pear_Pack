@@ -1,6 +1,6 @@
 # 版本线管理（VERSIONS.md）
 
-一个材质包要同时跟上多个 Minecraft 大版本（1.16.5 / 1.17.1 / … / 26.1）。
+一个材质包要同时跟上多个 Minecraft 大版本（1.16.5 / 1.17.1 / … / 1.21.11 / 26.3）。
 本文说明本项目采用的方案、日常命令、发布规范，以及"怎么保证不会误推到 main"。
 
 ---
@@ -53,8 +53,9 @@ tools/setup-guards.sh    一键安装本地防误推防护
 dist/                    构建产物（已 gitignore）
 ```
 
-- **`pack.mcmeta` 不再手写、不再提交**：`pack_format` / `version` / `description`
-  全部由 `FPP/build.json` 生成，避免版本号和实际内容漂移。
+- **`pack.mcmeta` 不再手写、不再提交**：`pack_format`（1.21.9 起还要 `min_format` /
+  `max_format`）/ `version` / `description` 全部由 `FPP/build.json` 生成，
+  避免版本号和实际内容漂移。见 §3.2 的"两种写法"。
 - `overlays/<line>/` 里 id 必须与 `build.json` 的 `lines[].line` 一致。
 - 构建 = 复制主体 → 覆盖 overlay → 写入生成的 `pack.mcmeta` → （可选）打包 zip。
 - 构建时文本资源（`.json` / `.mcmeta` / `.txt`）统一按 LF 落盘，生成的 `pack.mcmeta`
@@ -89,28 +90,61 @@ dist/                    构建产物（已 gitignore）
 
 ## 3. 版本线清单（真值在 `FPP/build.json`）
 
-| 线 id | MC 目标 | pack_format | 来源 | 包版本 | 冻结 | overlay |
+| 线 id | MC 目标 | 格式号 | 写法 | 来源 | 包版本 | 冻结 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `mc1.16` | 1.16.5 | 6 | ✅ 仓库历史证实 | v8.7 | 是 | 无（= 主体） |
-| `mc1.17` | 1.17.1 | 7 | ✅ 仓库历史证实 | v9.0 | 否 | 无（= 主体） |
-| `mc1.18` | 1.18.2 | 8 | ⚠️ 待核对 | v9.0 | 否 | 无（= 主体） |
-| `mc1.19` | 1.19.4 | 13 | ⚠️ 待核对 | v9.0 | 否 | 无（= 主体） |
-| `mc1.20` | 1.20.6 | 32 | ⚠️ 待核对 | v9.0 | 否 | 无（= 主体） |
-| `mc1.21` | 1.21.8 | 64 | ⚠️ 待核对 | v9.0 | 否 | 无（= 主体） |
-| `mc26.1` | 26.1 | ？ | ❌ 未知 | v9.0 | 否 | 无（= 主体） |
+| `mc1.16` | 1.16.5 | 6 | legacy | ✅ 仓库历史 + 两份独立格式表 | v8.7 | 是 |
+| `mc1.17` | 1.17.1 | 7 | legacy | ✅ 仓库历史 + 两份独立格式表 | v9.0 | 否 |
+| `mc1.18` | 1.18.2 | 8 | legacy | ✅ 两份独立格式表 | v9.0 | 否 |
+| `mc1.19` | 1.19.4 | 13 | legacy | ✅ 两份独立格式表 | v9.0 | 否 |
+| `mc1.20` | 1.20.6 | 32 | legacy | ✅ 两份独立格式表 | v9.0 | 否 |
+| `mc1.21` | **1.21.11** | **75** | range | ✅ 两个真实资源包 + 两份格式表 | v9.0 | 是 |
+| `mc26.1` | **26.1.2** | **84** | range | ✅ MCreator 生成器模板 + 格式表 | v9.0 | 是 |
+| `mc26.2` | 26.2 | 88 | range | ✅ 真实资源包 + 格式表 | v9.0 | 是 |
+| `mc26.3` | 26.3 | 97.1 | range | ✅ MCreator 模板 + 真实资源包 | v9.0 | 否（当前最新版） |
 
 "MC 目标"填该大版本的**最后一个补丁版本**（玩家实际会停留的版本），
 所以差异层也只需针对这个版本做。
 
-> ⚠️ **需要你核对的两件事**
-> 1. **pack_format 数字**：`1.16.5=6`、`1.17.1=7` 已由本仓库历史提交证实；
->    其余是凭已知版本表填入的，请在 Minecraft Wiki 的 "Pack format" 页面（或
->    misode 的 pack format 列表）核对后，把 `build.json` 里的
->    `packFormatSource` 从 `assumed` 改成 `verified`。改错了不会崩，但游戏里会提示
->    "不兼容"。
-> 2. **`mc26.1` 的 pack_format**：新版版本号体系，我不知道对应数字，
->    所以留成 `null` —— 在你填上之前，这条线不会被构建（`--release` 会直接报错）。
-> 3. 若 `mc1.21` 大版本的最终补丁**不是** 1.21.8，请同时改 `mc` 与 `packFormat`。
+### 3.1 这些数字是怎么核实的（2026-10-09）
+
+- **版本清单**取自 Mojang 官方 `version_manifest_v2.json`（一手来源）：1.16→1.16.5、
+  1.17→1.17.1、1.18→1.18.2、1.19→1.19.4、1.20→1.20.6、**1.21→1.21.11**（不是 1.21.8）、
+  26.1→26.1.2；之后是 26.2（2026-06-16）与 26.3（2026-09-15，当前最新）。
+- **格式号**：权威页面 `minecraft.wiki/w/Pack_format` 直连被 Cloudflare 403 挡住，
+  于是改用交叉验证：两份互相独立的格式表（MineVinyl、HTG George）在 1.16–26.3 上完全一致，
+  并与两类**实物**吻合 —— 真实资源包（Plastix/Plast-Pack、Godlander/objmc 声明 1.21.11=75；
+  ItzOratotITA/OratotPVP 声明 26.2=88；SummerFields 声明 max 97.1）与 MCreator 的
+  26.1.x / 26.3.x 生成器模板（84.0 / 97.1）。
+- 本次修正两处：`mc1.21` 由 1.21.8 / 64 → **1.21.11 / 75**；
+  `mc26.1` 由"未知" → **26.1.2 / 84**。其余五个数字与核实结果一致。
+
+### 3.2 两种写法：legacy 与 range
+
+`pack_format` 一直是单个数字，但 **1.21.9 起引入了区间写法** `min_format`/`max_format`，
+**26.2 起这两个字段变成必需**，`supported_formats` 被移除。所以生成的 `pack.mcmeta` 分两种：
+
+```json
+// legacy（≤ 1.21.8）：只写 pack_format
+{ "pack": { "pack_format": 32, "version": "...", "description": "..." } }
+
+// range（≥ 1.21.9，含 26.x）：三个字段都给，与真实资源包写法一致
+{ "pack": { "pack_format": 75, "min_format": 75, "max_format": 75, "version": "...", "description": "..." } }
+```
+
+写法由 `build.json` 的 `formatShape` 决定（省略时按格式号自动判断：≥ 65 用 range）。
+`min_format`/`max_format` 默认等于本线格式号，含义是"为这一个版本制作"；若想让一个包
+同时兼容一整段版本（例如 26.1–26.3），就在 `build.json` 里显式写 `minFormat`/`maxFormat`。
+
+> ⚠️ 别写反：把 range 写法塞进 1.20 的包（或反过来）正是游戏里"不兼容"提示的常见来源。
+
+> 📌 **格式号还在变**：`mc26.3` 是"当前最新版"而非"最终版"，Mojang 仍可能继续出 26.3.x。
+> 出补丁后只需更新 `mc` 与 `packFormat` 两个字段（格式号走势：26.1 的 84 → 26.2 的 88 →
+> 26.3 的 97.1，已出现小数位，别当成笔误）。
+
+> ⚠️ **与格式号无关、但同样影响游戏内表现的一件事**：1.21.4 起原版把物品模型从
+> `assets/minecraft/models/item/` 移到了 `assets/minecraft/items/`。1.21.11 与 26.x 这四条线
+> **目前还没有对应的 overlay 差异**，构建能通过、格式号也对，但这些版本下物品模型是否正常
+> 显示**尚未在游戏内实测**。要在这些版本上真正可用，需要按 §4 补 overlay。
 
 ---
 
@@ -118,11 +152,12 @@ dist/                    构建产物（已 gitignore）
 
 ```sh
 # 1) 在 FPP/build.json 的 lines 里加一项（line / mc / packFormat / packVersion / notes）
+#    格式号 ≥ 65（1.21.9 起）的线再加 formatShape: "range"，见 §3.2
 # 2) 如果这条线与主体有差异，把差异文件放进差异层：
-mkdir -p FPP/overlays/mc1.22/assets/minecraft/...
+mkdir -p FPP/overlays/mc26.4/assets/minecraft/...
 # 3) 验证：组装"基线线 + 新线"，对比两个产物（两侧都已归一化行尾）
-python tools/build.py --line mc1.16 --line mc1.22 --dev
-diff -rq dist/FPP-mc1.16.5-v8.7 dist/FPP-mc1.22-v9.0   # 差异应只有 pack.mcmeta + 你有意放进 overlay 的文件
+python tools/build.py --line mc1.16 --line mc26.4 --dev
+diff -rq dist/FPP-mc1.16.5-v8.7 dist/FPP-mc26.4-v9.0   # 差异应只有 pack.mcmeta + 你有意放进 overlay 的文件
 ```
 
 > ⚠️ 不要用 `diff -rq FPP/assets dist/...` 对比主体与产物：主体在 Windows 工作区里是 CRLF、
@@ -137,10 +172,10 @@ CI 会自动跟上：矩阵由 `build.json` 生成，不需要改 workflow。
 
 - **版本号是每条线独立的**：`mc1.16` 停在 `v8.7`；新线都从 `v9.0` 起各自递增。
   所以"v9.0"在不同线下内容不同 —— 看文件名/标题里的 MC 目标即可区分。
-- **tag**：`v<包版本>-mc<MC目标>`，例如 `v9.0-mc1.21.8`。
+- **tag**：`v<包版本>-mc<MC目标>`，例如 `v9.0-mc1.21.11`。
   推 tag 会触发 CI：构建**全部**线并把这些 zip 传进该 tag 的 Release。
 - **zip 名**：`FPP-mc<MC目标>-v<包版本>.zip`（由脚本生成，别手改）。
-- **`pack.mcmeta`**：`version` 字段为 `v<包版本> for MC<MC目标>`，如 `v9.0 for MC1.21.8`；
+- **`pack.mcmeta`**：`version` 字段为 `v<包版本> for MC<MC目标>`，如 `v9.0 for MC1.21.11`；
   由 `build.json` 生成，不要手写。
 - 历史 tag `v7.0` … `v8.7` 全部属于 `mc1.16` 线，保持原样不动。
 
