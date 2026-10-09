@@ -2,7 +2,7 @@ name: autobuild
 
 # 多版本线构建：由 FPP/build.json 决定构建哪些线，CI 不再写死 1.16.5。
 #   - PR / 手动触发：每条线各出一个 artifact（alpha 包）
-#   - push tag（v*）：构建后自动创建/更新 Release 并上传全部 zip
+#   - push tag（v*）：矩阵构建全绿后，从同一个 tag 重新构建并发布 Release
 #
 # 新增版本线只需改 FPP/build.json + 加 FPP/overlays/<line>/，CI 会自动跟上。
 
@@ -28,7 +28,7 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 生成构建矩阵
         id: matrix
@@ -58,34 +58,34 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 组装并打包
         run: python3 tools/build.py --pack "${{ matrix.pack }}" --line "${{ matrix.line }}" --zip
 
       - name: 上传 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: dist/${{ matrix.zip }}
           if-no-files-found: error
 
   release:
+    # 只在推 tag 时发布；先等矩阵构建全绿，再从同一个 tag 重新构建并上传。
+    # 这里不用 download-artifact：产物由同一脚本从 tag 提交生成，来源可追溯，
+    # 也少一个只在发版时才被验证的动作依赖。
     name: 发布 Release
     if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: 下载全部线的产物
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
+      - name: 从 tag 提交构建全部分发包
+        run: python3 tools/build.py --all --zip
 
       - name: 列出产物
-        run: ls -lh artifacts
+        run: ls -lh dist/*.zip
 
       - name: 创建 / 更新 Release
         env:
@@ -96,4 +96,4 @@ jobs:
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --title "FPP $TAG" --generate-notes
           fi
-          gh release upload "$TAG" artifacts/*.zip --clobber
+          gh release upload "$TAG" dist/*.zip --clobber

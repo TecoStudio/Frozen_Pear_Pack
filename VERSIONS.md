@@ -57,6 +57,8 @@ dist/                    构建产物（已 gitignore）
   全部由 `FPP/build.json` 生成，避免版本号和实际内容漂移。
 - `overlays/<line>/` 里 id 必须与 `build.json` 的 `lines[].line` 一致。
 - 构建 = 复制主体 → 覆盖 overlay → 写入生成的 `pack.mcmeta` → （可选）打包 zip。
+- 构建时文本资源（`.json` / `.mcmeta` / `.txt`）统一按 LF 落盘，生成的 `pack.mcmeta`
+  也是显式 LF —— 保证不同人、不同系统构建出的包内容一致（见 §2 的可校验性说明）。
 
 ---
 
@@ -73,7 +75,13 @@ dist/                    构建产物（已 gitignore）
 | 看哪条线 pack_format 还未知 | `python tools/build.py --unknown-lines` |
 
 - 产物：`dist/FPP-mc<MC目标>-v<包版本>/`（解包目录）与同名 `.zip`。
-- 打包是**可复现**的：条目排序 + 固定时间戳，相同输入产出字节一致的 zip（已实测）。
+- **打包是可校验的，跨机器内容一致**：条目排序 + 固定时间戳 + 文本资源强制 LF，
+  实测"本地 Windows 构建"与"GitHub Actions 构建"的 zip **2717 个条目 CRC 全部相同**。
+  只有"压缩后的字节"会因 zlib 版本不同而略有差异（同机器重复构建则字节完全一致）。
+  这样一份发布包可以被重新构建出来核对内容。
+- 文本类资源（`.json` / `.mcmeta` / `.txt`）在打包时统一按 LF 写入：资源包内容不该随
+  协作方 Windows 上的 `core.autocrlf` 设置而变 —— 否则同样的贴图只有行尾不同，
+  本地测试的包和 CI 发布的包就不是同一个东西了。产物校验会拒绝任何残留 CRLF 的文本资源。
 - `--release` 下若某条线的 `pack_format` 还是 `null`，脚本直接报错退出（exit 1），
   不会生成一个格式号错误的包。`packFormatSource: assumed` 的线只在日志里告警。
 

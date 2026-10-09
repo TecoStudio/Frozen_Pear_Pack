@@ -20,6 +20,10 @@
 pack.mcmeta 是 **生成** 的：pack_format / version / description 都来自 build.json，
 不再手写，避免版本号和实际内容漂移。
 
+文本类资源（.json / .mcmeta / .txt）在打包时统一按 LF 写入：它们不该随协作方
+Windows 上的 core.autocrlf 设置而变，否则本地构建与 CI 构建出的包内容不一致
+（同样的贴图，只有行尾不同），发布包也就无法校验。
+
 用法
 ----
     python tools/build.py --list                      # 列出所有版本线
@@ -61,7 +65,13 @@ SKIP_IN_PACK = {"overlays", "build.json"}
 # overlay 目录里这些条目不进入资源包（说明性文件，避免污染 zip）
 SKIP_IN_OVERLAY_NAMES = {"README.md", "readme.md"}
 SKIP_SUFFIXES = (".bak",)
-# 固定时间戳 => 相同输入产出字节一致（便于比对、缓存和校验）
+# 文本类资源在打包时统一按 LF 写入：资源包内容不应随协作方 Windows 上的
+# core.autocrlf 设置而变，否则「本地构建」和「CI 构建」出的包字节不同
+# （同样的贴图，只有行尾不一样），发布包就无法校验了。
+TEXT_SUFFIXES = (".json", ".mcmeta", ".txt", ".properties", ".lang", ".csv")
+# 固定时间戳 + 条目排序 => 构建可复现：
+#   同一台机器/同一 zlib 版本下，相同输入产出字节一致的 zip；
+#   不同机器之间每个条目的内容与 CRC 一致，只有"压缩后的字节"可能因 zlib 版本不同而略有差异。
 ZIP_DATE_TIME = (2020, 1, 1, 0, 0, 0)
 
 LINE_RE = re.compile(r"^mc[0-9][0-9A-Za-z._-]*$")
@@ -172,6 +182,18 @@ def iter_shared_entries(pack_dir: Path):
         yield entry
 
 
+def copy_file(src: Path, dst: Path) -> None:
+    """复制单个文件；文本类资源统一按 LF 写入（见 TEXT_SUFFIXES 的说明）。"""
+    if src.suffix.lower() in TEXT_SUFFIXES:
+        data = src.read_bytes()
+        if b"\r\n" in data:
+            data = data.replace(b"\r\n", b"\n")
+        dst.write_bytes(data)
+        shutil.copystat(src, dst)
+    else:
+        shutil.copy2(src, dst)
+
+
 def copy_tree(src: Path, dst: Path) -> int:
     """把 src 内容合并到 dst（同名覆盖），返回复制的文件数。"""
     count = 0
@@ -184,7 +206,7 @@ def copy_tree(src: Path, dst: Path) -> int:
         for name in sorted(files):
             if name.endswith(SKIP_SUFFIXES):
                 continue
-            shutil.copy2(root / name, target_root / name)
+            copy_file(root / name, target_root / name)
             count += 1
     return count
 
@@ -236,7 +258,7 @@ def assemble(pack_dir: Path, cfg: dict, line: dict, out_root: Path, do_zip: bool
         if entry.is_dir():
             shared_count += copy_tree(entry, out_dir / entry.name)
         else:
-            shutil.copy2(entry, out_dir / entry.name)
+            copy_file(entry, out_dir / entry.name)
             shared_count += 1
 
     ov = overlay_dir(pack_dir, line_id)
@@ -248,15 +270,16 @@ def assemble(pack_dir: Path, cfg: dict, line: dict, out_root: Path, do_zip: bool
             if entry.is_dir():
                 overlay_count += copy_tree(entry, out_dir / entry.name)
             else:
-                shutil.copy2(entry, out_dir / entry.name)
+                copy_file(entry, out_dir / entry.name)
                 overlay_count += 1
         overlay_note = f"{overlay_count} 个文件来自 overlay"
 
-    # pack.mcmeta 由 build.json 生成，最后一次写入以确保覆盖任何残留
+    # pack.mcmeta 由 build.json 生成，最后一次写入以确保覆盖任何残留。
+    # 注意必须显式指定 newline="\n"：Path.write_text 在 Windows 上会把 \n 变成
+    # \r\n，导致本地构建的 pack.mcmeta 与 CI / Linux 上生成的不一致。
     mcmeta = build_mcmeta(cfg, line)
-    (out_dir / "pack.mcmeta").write_text(
-        json.dumps(mcmeta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    with open(out_dir / "pack.mcmeta", "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(json.dumps(mcmeta, ensure_ascii=False, indent=2) + "\n")
 
     # 校验：产物必须是「根目录下有 pack.mcmeta 和 assets/ 的资源包」
     problems = []
@@ -265,6 +288,13 @@ def assemble(pack_dir: Path, cfg: dict, line: dict, out_root: Path, do_zip: bool
         problems.append("pack.mcmeta 的 pack_format 与 build.json 不一致")
     if not (out_dir / "assets" / "minecraft").is_dir():
         problems.append("产物缺少 assets/minecraft 目录")
+    crlf = [
+        p.relative_to(out_dir).as_posix()
+        for p in out_dir.rglob("*")
+        if p.is_file() and p.suffix.lower() in TEXT_SUFFIXES and b"\r\n" in p.read_bytes()
+    ]
+    if crlf:
+        problems.append(f"{len(crlf)} 个文本资源仍含 CRLF（行尾未归一化）：{', '.join(crlf[:3])} …")
     if problems:
         for p in problems:
             err(f"{cfg['id']}/{line_id} 产物校验失败：{p}")
