@@ -24,6 +24,23 @@
 
 - BRP(deprecated) - 血红梨红石包（Blood Redstone Pear）是 Smallcoral 主持制作，活塞脑壳和 LYOfficial 协助改进的红石拓展包，弥补原版冻梨子红石材质简朴到不实用的特色。（deprecated）
 
+## 多版本线构建
+
+Minecraft 更新太快，本仓库按**大版本的最终版本**拆成多条版本线（1.16.5 / 1.17.1 / 1.18.2 / 1.19.4 / 1.20.6 / 1.21.8 / 26.1 …），
+所有线共用一套主体资源（`FPP/`），确实不同的文件放进差异层 `FPP/overlays/<线>/`，
+`pack.mcmeta` 由构建脚本按线生成 —— 不再手写，也不会出现"版本号和内容对不上"。
+
+```sh
+python tools/build.py --list          # 看有哪些版本线、各自 pack_format
+python tools/build.py --dev           # 组装默认线到 dist/，可直接拖进游戏
+python tools/build.py --all --zip     # 全部线各出一个分发包
+```
+
+产物为 `dist/FPP-mc<MC版本>-v<包版本>.zip`，推 `v9.0-mc1.21.8` 这类 tag 会由 CI 自动构建并发布 Release。
+
+目录约定、发布规范、以及"如何避免误提交/误推到 master"见 **[VERSIONS.md](VERSIONS.md)**。
+（构建需要 Python 3.8+，只用标准库；本地没有 `zip` 命令也没关系。）
+
 ## 光影效果展示
 
 ![](https://ns.complexstudio.net/uploads/images/2022-07-11/775cce64b4453aa3c4f0277dd582a9f9.png)

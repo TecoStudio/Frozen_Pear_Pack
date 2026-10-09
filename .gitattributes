@@ -1,0 +1,10 @@
+# 这些文件在 Windows 上会被 core.autocrlf 换成 CRLF，
+# 而 CRLF 会让 shell 脚本 / 钩子在 git-bash 和 Linux 上直接跑不起来。
+# 强制它们始终以 LF 存储与检出（index 里本来就是 LF）。
+*.sh          text eol=lf
+*.py          text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+.githooks/*   text eol=lf
+.gitignore    text eol=lf
+.gitattributes text eol=lf

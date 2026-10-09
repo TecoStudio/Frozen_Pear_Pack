@@ -1,0 +1,25 @@
+#!/bin/sh
+# Frozen Pear Pack —— 防止把工作直接提交到 master（第 2 层防护）
+#
+# 规则：在 master 上提交会被拒绝。
+# 放行方式：ALLOW_MAIN=1 git commit ...
+# 关闭方式：git config --unset core.hooksPath
+
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+case "$branch" in
+  master|main)
+    if [ -z "$ALLOW_MAIN" ]; then
+      echo ""
+      echo "❌ 拒绝在 $branch 上提交。"
+      echo "   请先按版本线/主题开分支："
+      echo "     git switch -c mc1.21/fix-lantern-animation"
+      echo "     git switch -c chore/build-script"
+      echo "   确实要直接提交 $branch：ALLOW_MAIN=1 git commit ..."
+      echo ""
+      exit 1
+    fi
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,28 @@
+#!/bin/sh
+# Frozen Pear Pack —— 防止直接推送 master（第 2 层防护）
+#
+# 规则：往 refs/heads/master（或 main）推送会被拒绝，请走 PR。
+# 放行方式：ALLOW_MAIN=1 git push ...
+# 关闭方式：git config --unset core.hooksPath
+#
+# stdin 每行格式：<local ref> <local sha> <remote ref> <remote sha>
+
+status=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/master|refs/heads/main)
+      if [ -z "$ALLOW_MAIN" ]; then
+        echo ""
+        echo "❌ 拒绝推送到 $remote_ref。"
+        echo "   请推送你自己的工作分支，然后开 PR："
+        echo "     git push -u origin HEAD"
+        echo "   确实要直接推送 $remote_ref：ALLOW_MAIN=1 git push ..."
+        echo ""
+        status=1
+      fi
+      ;;
+  esac
+done
+
+exit $status

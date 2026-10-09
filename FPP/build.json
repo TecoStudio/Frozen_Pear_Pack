@@ -1,0 +1,71 @@
+{
+  "id": "FPP",
+  "name": "Frozen Pear Pack",
+  "description": "§l§6FPP \n§l§7Only for Java Edition",
+  "defaultLine": "mc1.21",
+  "lines": [
+    {
+      "line": "mc1.16",
+      "mc": "1.16.5",
+      "packFormat": 6,
+      "packFormatSource": "verified",
+      "packVersion": "8.7",
+      "frozen": true,
+      "notes": "历史主线：当前 FPP/ 主体内容就是 1.16.5，v8.7 为最后一个正式版。"
+    },
+    {
+      "line": "mc1.17",
+      "mc": "1.17.1",
+      "packFormat": 7,
+      "packFormatSource": "verified",
+      "packVersion": "9.0",
+      "frozen": false,
+      "notes": "2025-04 之前曾以 1.17.1/FPP 存在，当时与 1.16.5 的 2723 个文件完全相同"
+    },
+    {
+      "line": "mc1.18",
+      "mc": "1.18.2",
+      "packFormat": 8,
+      "packFormatSource": "assumed",
+      "packVersion": "9.0",
+      "frozen": false,
+      "notes": "待核对 pack_format"
+    },
+    {
+      "line": "mc1.19",
+      "mc": "1.19.4",
+      "packFormat": 13,
+      "packFormatSource": "assumed",
+      "packVersion": "9.0",
+      "frozen": false,
+      "notes": "1.19/1.19.2 为 9，1.19.3 为 12，1.19.4 起为 13；本线取该大版本最终补丁"
+    },
+    {
+      "line": "mc1.20",
+      "mc": "1.20.6",
+      "packFormat": 32,
+      "packFormatSource": "assumed",
+      "packVersion": "9.0",
+      "frozen": false,
+      "notes": "1.20.2 起支持 supported_formats；1.20.5/1.20.6 为 32"
+    },
+    {
+      "line": "mc1.21",
+      "mc": "1.21.8",
+      "packFormat": 64,
+      "packFormatSource": "assumed",
+      "packVersion": "9.0",
+      "frozen": false,
+      "notes": "当前开发主线。1.21.4 起物品模型转入 assets/minecraft/items/，需要 overlay 差异；若该大版本最终补丁不是 1.21.8，请同时改 mc 与 packFormat"
+    },
+    {
+      "line": "mc26.1",
+      "mc": "26.1",
+      "packFormat": null,
+      "packFormatSource": "unknown",
+      "packVersion": "9.0",
+      "frozen": false,
+      "notes": "新版本号体系，pack_format 未知：填上数字之前本线不会被构建（--release 直接报错）"
+    }
+  ]
+}
