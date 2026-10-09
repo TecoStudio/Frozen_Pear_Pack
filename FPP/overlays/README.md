@@ -29,6 +29,11 @@
 ## 检查某条线到底差异多大
 
 ```sh
-python tools/build.py --list                       # 看每线 overlay 文件数
-diff -rq FPP/assets dist/FPP-mc1.21.8-v9.0/assets # 组装后与主体对比
+python tools/build.py --list                            # 看每线 overlay 文件数
+python tools/build.py --line mc1.16 --line mc1.21 --dev # 组装基线线 + 目标线
+diff -rq dist/FPP-mc1.16.5-v8.7 dist/FPP-mc1.21.8-v9.0  # 差异应只有 pack.mcmeta
 ```
+
+> 注意别拿主体目录直接跟产物对比（`diff -rq FPP/assets dist/...`）：主体在 Windows 工作区里是
+> CRLF、产物是归一化后的 LF，会刷出几百行假差异。比两个**构建产物**最可靠，
+> 或用 GNU diff 的 `--strip-trailing-cr`。

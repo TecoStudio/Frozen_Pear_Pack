@@ -50,7 +50,7 @@ Output: `dist/FPP-mc<MC>-v<pack version>.zip`. Pushing a tag like `v9.0-mc1.21.8
 all lines and publish them as a GitHub Release.
 
 Layout conventions, release rules and how to avoid accidentally pushing to `master` are in
-**[VERSIONS.md](VERSIONS.md)** (Chinese). Build needs Python 3.8+ only — standard library, no `zip` binary required.
+**[VERSIONS.md](VERSIONS.md)** (Chinese). Build needs only Python 3 — standard library, no `zip` binary required.
 
 ---
 

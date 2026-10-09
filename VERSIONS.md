@@ -120,10 +120,14 @@ dist/                    构建产物（已 gitignore）
 # 1) 在 FPP/build.json 的 lines 里加一项（line / mc / packFormat / packVersion / notes）
 # 2) 如果这条线与主体有差异，把差异文件放进差异层：
 mkdir -p FPP/overlays/mc1.22/assets/minecraft/...
-# 3) 验证
-python tools/build.py --line mc1.22 --dev
-diff -rq FPP/assets dist/FPP-mc1.22-v9.0/assets   # 看差异范围
+# 3) 验证：组装"基线线 + 新线"，对比两个产物（两侧都已归一化行尾）
+python tools/build.py --line mc1.16 --line mc1.22 --dev
+diff -rq dist/FPP-mc1.16.5-v8.7 dist/FPP-mc1.22-v9.0   # 差异应只有 pack.mcmeta + 你有意放进 overlay 的文件
 ```
+
+> ⚠️ 不要用 `diff -rq FPP/assets dist/...` 对比主体与产物：主体在 Windows 工作区里是 CRLF、
+> 产物是归一化后的 LF，会刷出几百行假差异（本仓库实测 441 行）。
+> 要么比两个构建产物，要么用 GNU diff 的 `--strip-trailing-cr`。
 
 CI 会自动跟上：矩阵由 `build.json` 生成，不需要改 workflow。
 

@@ -39,7 +39,7 @@ python tools/build.py --all --zip     # 全部线各出一个分发包
 产物为 `dist/FPP-mc<MC版本>-v<包版本>.zip`，推 `v9.0-mc1.21.8` 这类 tag 会由 CI 自动构建并发布 Release。
 
 目录约定、发布规范、以及"如何避免误提交/误推到 master"见 **[VERSIONS.md](VERSIONS.md)**。
-（构建需要 Python 3.8+，只用标准库；本地没有 `zip` 命令也没关系。）
+（构建只需 Python 3、纯标准库、无第三方依赖；本地没有 `zip` 命令也没关系。）
 
 ## 光影效果展示
 
