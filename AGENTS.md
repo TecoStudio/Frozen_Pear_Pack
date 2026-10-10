@@ -2,7 +2,8 @@
 
 Frozen Pear Pack（冻梨子材质）是一个 Minecraft Java 版资源包仓库。
 **版本管理方式：每个 MC 版本一条 git 分支** —— `master` = 最新版（手动跟随），
-`mc<MC目标>` = 各老版本线。人读的正文在 [`docs/`](docs/README.md)，动手前先看一眼。
+`<版本号>` = 各老版本线（分支名直接用版本号：`1.16.5`、`1.15.2`）。人读的正文在
+[`docs/`](docs/README.md)，动手前先看一眼。
 
 ## 红线（违反会造成**静默**错误）
 
@@ -13,7 +14,7 @@ Frozen Pear Pack（冻梨子材质）是一个 Minecraft Java 版资源包仓库
    `git format-patch -1 --stdout` + `git apply --index`，或 `git checkout <分支> -- <路径>`。
 3. **不要用 `git add -A`** —— `.gitignore` 里没有构建产物/临时目录，一把梭会把它们提交。
    用 `git add FPP` 或明确路径。
-4. **不要改已发布的 tag**；新 tag 必须带 MC 目标：`v<包版本>-mc<MC目标>`（例 `v8.8-mc1.16.5`），
+4. **不要改已发布的 tag**；新 tag 必须带 MC 目标：`v<包版本>-<MC目标>`（例 `v8.8-1.16.5`），
    否则两条线会撞车。
 5. **改 `FPP/pack.mcmeta` 时连格式号一起核对**（[docs/05](docs/05-pack.mcmeta-与格式号.md)）：
    格式号与该 MC 版本不符 = 游戏里显示"不兼容"，包不加载。
@@ -25,7 +26,7 @@ Frozen Pear Pack（冻梨子材质）是一个 Minecraft Java 版资源包仓库
 | 我要…… | 读 | 关键命令 |
 | --- | --- | --- |
 | 改一张贴图（可能要多条线同步） | [docs/03](docs/03-日常流程.md) | `git switch -c fix/x <目标分支>` |
-| 给新 MC 版本开分支 | [docs/04](docs/04-开一条新版本分支.md) | `git switch -c mc1.21.11 master` |
+| 给新 MC 版本开分支 | [docs/04](docs/04-开一条新版本分支.md) | `git switch -c 1.21.11 master` |
 | 查/改格式号与版本号 | [docs/05](docs/05-pack.mcmeta-与格式号.md) | `git show HEAD:FPP/pack.mcmeta` |
 | 处理跨版本路径变化 | [docs/06](docs/06-各版本路径变化对照.md) | 见该页"已知的路径变化" + 逐版实测表 |
 | 核验一条分支是否真对得上 | [docs/07](docs/07-核验一条分支.md) | `python <docs/07 里那个脚本> 1.16.5` |
@@ -44,8 +45,9 @@ Frozen Pear Pack（冻梨子材质）是一个 Minecraft Java 版资源包仓库
 
 ## 当前状态（2026-10-10）
 
-- `master` / `mc1.16.5`：内容仍为 1.16.5 时代（`pack_format` 6，`version` 还是 `"test"`）。
+- `master` / `1.16.5`：内容仍为 1.16.5 时代（`pack_format` 6，`version` 还是 `"test"`）。
   **master 待手动带到最新 MC 版本** —— 到时 `pack_format` 与 `version` 一起改。
-- `mc1.15.2`：内容取自 tag v7.0 的源码树（`pack_format` 5，`version` `"v7.0 for MC1.15"`）。
+- `1.15.2`：内容取自 tag v7.0 的源码树（`pack_format` 5，`version` `"v7.0 for MC1.15"`）。
 - 其余版本线（1.17.1 / 1.18.2 / 1.19.4 / 1.20.6 / 1.21.11 / 26.x）**尚未创建**。
-- `feat/version-lines` 分支（旧的"单主干 + overlay"方案，PR #16）已作废，仅作参考。
+- `feat/version-lines`（旧的"单主干 + overlay"方案）与它的 PR **已删除**；其中有价值的内容
+  已并入 [docs/05](docs/05-pack.mcmeta-与格式号.md)（格式号表）与 [docs/07](docs/07-核验一条分支.md)（核验脚本）。
