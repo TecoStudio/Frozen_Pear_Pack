@@ -45,6 +45,8 @@ Frozen Pear Pack（冻梨子材质）是一个 Minecraft Java 版资源包仓库
 
 ## 当前状态（2026-10-10）
 
+- **远端**：`origin` = `TecoStudio/Frozen_Pear_Pack`（**主仓库**：PR 与 Release 都在这里）；
+  `fork` = `LIPiston` 旧 fork，**不要再往它提交**（两边都提交会真分叉）。
 - `master` / `1.16.5`：内容仍为 1.16.5 时代（`pack_format` 6，`version` 还是 `"test"`）。
   **master 待手动带到最新 MC 版本** —— 到时 `pack_format` 与 `version` 一起改。
 - `1.15.2`：内容取自 tag v7.0 的源码树（`pack_format` 5，`version` `"v7.0 for MC1.15"`）。
