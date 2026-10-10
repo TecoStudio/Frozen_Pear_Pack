@@ -21,11 +21,22 @@ Frozen Pear Pack（冻梨子材质）是一个 Minecraft Java 版资源包仓库
 6. **动文件前先核验路径**（[docs/07](docs/07-核验一条分支.md) 的脚本）：资源包是被动覆盖，
    路径错了不报错、只是不生效。
 
+## PR 打到哪（别弄混）
+
+| 你要做的事 | 目标分支 | 开 PR |
+| --- | --- | --- |
+| 更新**最新** MC 版本的材质 | `master` | `gh pr create --base master` |
+| 修**老版本**的 bug / 调整 | 那条版本线 | `gh pr create --base 1.16.5` |
+
+通用改动（绝大多数贴图）**每条线各开一次 PR**，理由见红线 2。远端只有一个主仓库：
+`origin` = `TecoStudio/Frozen_Pear_Pack`（详见 [docs/03](docs/03-日常流程.md)）。
+
 ## 做什么 → 读哪篇
 
 | 我要…… | 读 | 关键命令 |
 | --- | --- | --- |
 | 改一张贴图（可能要多条线同步） | [docs/03](docs/03-日常流程.md) | `git switch -c fix/x <目标分支>` |
+| 决定 PR 打哪条分支 | [docs/03](docs/03-日常流程.md) | `gh pr create --base <目标分支>` |
 | 给新 MC 版本开分支 | [docs/04](docs/04-开一条新版本分支.md) | `git switch -c 1.21.11 master` |
 | 查/改格式号与版本号 | [docs/05](docs/05-pack.mcmeta-与格式号.md) | `git show HEAD:FPP/pack.mcmeta` |
 | 处理跨版本路径变化 | [docs/06](docs/06-各版本路径变化对照.md) | 见该页"已知的路径变化" + 逐版实测表 |
@@ -47,6 +58,8 @@ Frozen Pear Pack（冻梨子材质）是一个 Minecraft Java 版资源包仓库
 
 - **远端**：`origin` = `TecoStudio/Frozen_Pear_Pack`（**主仓库**：PR 与 Release 都在这里）；
   `fork` = `LIPiston` 旧 fork，**不要再往它提交**（两边都提交会真分叉）。
+- **保护**：只有 `master` 强制走 PR（含管理员）；`1.16.5` / `1.15.2` 目前可以直接 push，
+  但流程上仍一律走 PR。
 - `master` / `1.16.5`：内容仍为 1.16.5 时代（`pack_format` 6，`version` 还是 `"test"`）。
   **master 待手动带到最新 MC 版本** —— 到时 `pack_format` 与 `version` 一起改。
 - `1.15.2`：内容取自 tag v7.0 的源码树（`pack_format` 5，`version` `"v7.0 for MC1.15"`）。
