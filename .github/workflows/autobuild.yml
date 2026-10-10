@@ -12,10 +12,10 @@ jobs:
 
       - name: Zip files
         run: |
-          cd 1.16.5/FPP
+          cd FPP
           zip -qq -r FPP-$(echo ${{ github.sha }} | cut -c1-7)-1.16.5.zip *
 
       - uses: actions/upload-artifact@v4
         with:
           name: FPP-1.16.5-unzip2use
-          path: 1.16.5/FPP/FPP-*
+          path: FPP/FPP-*
