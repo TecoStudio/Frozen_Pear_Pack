@@ -141,10 +141,64 @@ dist/                    构建产物（已 gitignore）
 > 出补丁后只需更新 `mc` 与 `packFormat` 两个字段（格式号走势：26.1 的 84 → 26.2 的 88 →
 > 26.3 的 97.1，已出现小数位，别当成笔误）。
 
-> ⚠️ **与格式号无关、但同样影响游戏内表现的一件事**：1.21.4 起原版把物品模型从
-> `assets/minecraft/models/item/` 移到了 `assets/minecraft/items/`。1.21.11 与 26.x 这四条线
-> **目前还没有对应的 overlay 差异**，构建能通过、格式号也对，但这些版本下物品模型是否正常
-> 显示**尚未在游戏内实测**。要在这些版本上真正可用，需要按 §4 补 overlay。
+### 3.3 已核实：主体里有版本相关的文件，但还没补 overlay
+
+格式号对不等于游戏里就对。资源包是**被动覆盖**：原版一旦改了某个路径，你放在旧路径下的
+文件就成了**孤儿** —— 不报错、不崩溃，只是**不生效**。用官方客户端 jar（一手来源）逐版核对后：
+
+| 线 | MC | 你改过、但该版本原版已不读的文件数 |
+| --- | --- | --- |
+| `mc1.16` | 1.16.5 | **0**（主体内容的年代，天然对齐） |
+| `mc1.17` | 1.17.1 | 8 |
+| `mc1.18` | 1.18.2 | 8 |
+| `mc1.19` | 1.19.4 | 11 |
+| `mc1.20` | 1.20.6 | 14 |
+| `mc1.21` | 1.21.11 | 71 |
+| `mc26.1` | 26.1.2 | 130 |
+| `mc26.2` | 26.2 | 156 |
+| `mc26.3` | 26.3 | 156 |
+
+同一份主体（2715 个文件）在各版本下的四分类（以 mc26.3 为例）：
+
+| 分类 | 数量 | 含义 |
+| --- | --- | --- |
+| 原版也有此路径 | 1784 (65.7%) | 正常覆盖，通用 |
+| 原版是后来才加的 | 217 (8.0%) | 覆盖较新原版文件，正常 |
+| 包自建文件（原版从来没有） | 524 (19.3%) | 自建资源，正常 |
+| 与 1.16.5 原版逐字节相同 | 34 (1.3%) | 丢了也不影响外观（只是白带） |
+| **你改过、原版已不读此路径** | **156 (5.7%)** | **需要 overlay，否则你的改动在新版本下不生效** |
+
+**已确认的主要原因**（都是原版改路径，不是我们写错）：
+
+| 变化 | 从 | 到 | 影响 |
+| --- | --- | --- | --- |
+| 1.17 | `texts/credits.txt` | `texts/credits.json` | 你自定义的 credits（7411 B，原版 10566 B）**自 mc1.17 起就没显示过** |
+| 1.20.2 起 | `textures/gui/…` 部分图标 | `textures/gui/sprites/…` | 空盔甲槽图标等 |
+| 1.21.2 | `textures/entity/arrow.png`、`squid.png`、`cow.png`、`pig.png`、`sheep_fur.png`、`alex/steve.png` 等 | 拆进 `entity/projectiles/`、`entity/squid/`、`entity/cow/`、`entity/player/{slim,wide}/` 等子目录 | 实体贴图大面积失效 |
+| 1.21.2 | `textures/models/armor/*_layer_*.png` | `textures/entity/equipment/humanoid*/…` | 13 个盔甲贴图 |
+| 1.21.2 | `textures/environment/sun.png` | `textures/environment/celestial/sun.png`（`moon_phases.png` 拆成逐月相文件） | 日月贴图 |
+| 1.21.4 | `models/item/*.json` | `items/*.json`（新 schema） | 7 个物品模型（另见下） |
+| 1.21.5+ | `entity/{cow,pig,chicken,cat,rabbit,bed,signs,llama/decor}/*` | 变体化/子目录化 | 26.x 下累计 156 个 |
+
+**怎么自己再查一遍**（换新版本、加新线时都应该跑）：
+
+```sh
+python tools/audit.py --line mc26.3          # 列出该线“改了但不生效”的文件 + 猜测新路径
+python tools/audit.py --list                 # 有哪些线
+python tools/audit.py --line mc26.3 --strict # 有需处理文件时退出码 1
+python tools/audit.py --all                  # 全部线（会下载多个官方 jar，20-40 MB/个，缓存在 dist/.jarcache/）
+```
+
+它拿官方 `version_manifest_v2.json` → client jar 当参照（下载校验 sha1），并把主体文件分成
+上面那五类；`--baseline`（默认 1.16.5，即主体内容出处）用来区分"原版改名了"和"你自建的文件"。
+
+> ⚠️ 这 156 个孤儿**不影响构建**：`build.py` 照样通过、格式号也对 —— 只是这些版本下游戏不读那些文件。
+> 修法是给对应线补 overlay（§6.1），**不是**改主体：主体要照顾 mc1.16 ~ mc1.20，老路径在那儿是对的。
+
+> 📌 `mc1.21.4+` 的物品模型（`models/item/` → `items/`）还有一层：目前看**可能无害** ——
+> 原版新的 `items/waxed_copper_block.json`、`items/infested_stone.json` 指向 `block/copper_block`、
+> `block/stone`，恰好等于你当年想达到的效果（蜡铜看着像铜、虫蚀石看着像石头）。
+> 但这是**从路径推断的，没有游戏内实测**。
 
 ---
 
@@ -189,6 +243,49 @@ CI 会自动跟上：矩阵由 `build.json` 生成，不需要改 workflow。
 | 只有某个版本不同的文件 | 放进 `FPP/overlays/<line>/...`，只影响那一条线 |
 | 某条线专属的结构性变化（如 1.21.4 的物品模型迁移） | 在对应 overlay 里放替换文件；主体保持通用 |
 | 已冻结的老线（`mc1.16`） | 只接受"重新打包"，内容不再改 |
+
+### 6.1 三种典型改动（以及"为什么不用 checkout 旧版本"）
+
+判定只看一句话：**这次改动是所有版本都一样，还是只有某个版本不同？**
+所有版本一样 → 改主体；只有某个版本不同 → 进那条线的 overlay。
+
+**① 通用改动（日常绝大多数：画贴图、改贴图、改 credits/splashes 文本）**
+
+```sh
+git switch -c tex/lantern-fix          # 从最新 master 开分支
+# 直接改 FPP/assets/minecraft/textures/...（全仓库只有这一份文件）
+python tools/build.py --dev            # 组装默认线，拖进游戏看效果
+python tools/build.py --all --zip      # 9 条线全部重新打包，一条都不会漏
+git commit && git push -u origin HEAD  # 然后开 PR
+```
+
+**② 只有某个 MC 版本不同的改动**
+
+```sh
+mkdir -p FPP/overlays/mc26.3/assets/minecraft/items
+# 把只给 26.3 用的文件放进去：路径与资源包根目录一致，同名会覆盖主体
+```
+
+**③ Minecraft 出了新版本**
+
+1. 核实版本号与格式号（方法见 §3.1），并确认它是否已经是当前线的最终补丁；
+2. 在 `FPP/build.json` 的 `lines` 里加一项：`line` / `mc` / `packFormat` /
+   `packFormatSource: "verified"` / `formatShape: "range"`（格式号 ≥65 时）/ `packVersion` /
+   `notes`（**写清核实来源**）；
+3. 跑 `python tools/audit.py --line <新线>`：它会列出主体里"你改过、但新版本原版已不读"的文件
+   （原因见 §3.3），照此给这条线建 overlay 补上（一个失效文件都没有就不用建）；
+4. `python tools/build.py --line <新线> --dev` 测过 → `--all --zip` → 提交 PR。
+
+**旧线不需要做任何事**：既不用"切回去"，也不用 backport —— 主体没动，
+重新构建出来的内容和上次发布的完全一致。
+
+**那 `git checkout` 到底什么时候用？** 只有一种：复现某个**已发布**的包来对比或取文件，
+例如 `git checkout v8.7-mc1.16.5`（tag），看完切回来。日常工作**不需要**它 ——
+想要"某条线的包"不是 checkout，而是直接构建：
+
+```sh
+python tools/build.py --line mc1.16 --zip   # 产出 dist/FPP-mc1.16.5-v8.7.zip
+```
 
 **什么情况下才值得开一条长期分支？** 当某条线要有人长期独立维护（几个月只动它）、
 且与主体的共享比例已经很低（< 50%）。那时的做法是从主干切维护分支

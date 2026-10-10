@@ -4,3 +4,7 @@
 
 # 构建产物（tools/build.py）
 dist/
+
+# Python（py_compile / 导入缓存）
+__pycache__/
+*.pyc

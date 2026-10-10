@@ -56,6 +56,7 @@ python tools/build.py --line mc1.16 --dev         # 指定线
 python tools/build.py --all --zip                 # 全部线打包（未知 pack_format 的线会跳过并警告）
 python tools/build.py --line mc1.21 --zip --release   # 发布模式：pack_format 未知直接报错
 python tools/build.py --unknown-lines             # 哪条线还没填 pack_format
+python tools/audit.py --line mc26.3               # 该线有哪些文件在新版本下其实不生效（见 §3.3）
 ```
 构建只需要 Python 3（纯标准库、无第三方依赖），**不需要 `zip` 命令**。
 已实测环境：本机 Python 3.14 与 CI 的 `python3`（未在更老的 3.x 上实测过）。
@@ -89,6 +90,7 @@ git push -u origin HEAD                           #    永远不写 master 字�
 | 方案为什么这么定、发布规范、backport 规则、防误推 main | [VERSIONS.md](VERSIONS.md) |
 | overlay 该放什么、怎么放、差异来源备忘 | [FPP/overlays/README.md](FPP/overlays/README.md) |
 | 构建脚本的全部参数 | [tools/build.py](tools/build.py) 顶部 docstring 或 `--help` |
+| 主体里的文件在新版本下还生效吗（哪些要补 overlay） | [tools/audit.py](tools/audit.py)：`python tools/audit.py --line <线>` |
 | CI 行为（矩阵、发版） | [.github/workflows/autobuild.yml](.github/workflows/autobuild.yml) |
 | 防护钩子 | [.githooks/README.md](.githooks/README.md) |
 
@@ -112,9 +114,13 @@ git push -u origin HEAD                           #    永远不写 master 字�
 - `mc26.1` 是 **26.1.2**，格式 **84**；另加了 26.2（88）与 26.3（97.1）。
 - **`mc26.3` 是"当前最新"而非"最终版"**：Mojang 仍会出 26.3.x。出新补丁后更新 `mc` 与
   `packFormat` 两个字段（格式号已出现小数位，别当成笔误）。
-- **游戏内表现仍未实测**：1.21.4 起原版把物品模型移到 `assets/minecraft/items/`，
-  1.21.11 与三条 26.x 线都还没有对应 overlay。构建能过、格式号也对，但这些版本下物品
-  模型是否正常显示**没有任何人测过**。
+- **主体里有版本相关的文件，但还没补 overlay**（详见 VERSIONS.md §3.3；已用官方客户端 jar 逐版核实，
+  用 `python tools/audit.py --line <线>` 可复现）：`mc1.16` 为 0 个，`mc1.17`/`mc1.18` 各 8、
+  `mc1.19` 11、`mc1.20` 14、**`mc1.21` 71、`mc26.1` 130、`mc26.2`/`mc26.3` 各 156**。
+  原因是原版改路径：`texts/credits.txt`→`credits.json`（**1.17** 起，你自定义的 credits 从此没生效过）、
+  实体/盔甲/环境贴图在 **1.21.2** 拆进子目录（`entity/projectiles/`、`entity/equipment/humanoid/`、
+  `environment/celestial/` …）、物品模型在 **1.21.4** 移到 `items/`。这些**不影响构建**，只影响游戏内表现，
+  且**尚未游戏内实测**。
 - `minecraft.wiki/w/Pack_format` 是权威页，但本机直连与 Wayback 快照都取不到（403）；
   以后换格式号请照 VERSIONS.md §3.1 做交叉验证，并把来源写进该线的 `notes`。
 - `PPP` / `BRP` 仍是老结构（手写 pack.mcmeta，无 build.json）。要让它们接入版本线，
