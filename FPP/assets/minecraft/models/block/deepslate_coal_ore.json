@@ -3,7 +3,7 @@
 	"parent": "block/cube_all",
 	"textures": {
 		"1": "block/deepslate_coal_ore",
-		"all": "block/deepslate",
+		"all": "block/deepslate.png",
 		"particle": "block/deepslate_coal_ore"
 	},
 	"elements": [
