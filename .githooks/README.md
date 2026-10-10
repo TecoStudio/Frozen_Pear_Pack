@@ -2,7 +2,7 @@
 
 本地防护钩子，用来阻止"手滑把工作提交/推到 master"。属于防误操作的第 2 层
 （第 1 层是 GitHub 的 branch protection，第 3 层是 `branch.master.pushRemote` 兜底，
-详见仓库根目录的 `VERSIONS.md`）。
+详见 [docs/08-防误推-main.md](../docs/08-防误推-main.md)）。
 
 ## 安装（clone 之后执行一次）
 

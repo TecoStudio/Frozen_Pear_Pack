@@ -254,7 +254,7 @@ def audit_one(pack_dir: Path, cfg: dict, line: dict, baseline: str | None, quiet
                 hint = "  → 该文件名在原版里已彻底消失（可能被拆分/合并/弃用）"
             log(f"      {rel}{hint}")
             result["needs_overlay"].append({"path": rel, "target_candidates": cands})
-        log("\n    处理方式见 VERSIONS.md §3.3 / §6.1：给这些线补 overlay，主体保持不变。")
+        log("\n    处理方式见 docs/04-路径兼容性审计.md 与 docs/07-改动与-backport.md：给这些线补 overlay，主体保持不变。")
 
     return result
 
